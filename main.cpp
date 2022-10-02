@@ -1,6 +1,9 @@
 #include "Parser.hpp"
+#include "Window.hpp"
+#include <FL/Fl_Table_Row.H>
 
 using namespace parser;
+using namespace window;
 
 int main() 
 {
@@ -9,13 +12,10 @@ int main()
 	Parser pars(tock);
 
 	string expr;
-	while (true)
-	{
-		// mmax(mmin(2+4, 3^2, 5*6), (2-1)-40, 234)
-		getline(cin, expr);
-		cout << pars.parse(expr) << endl;
-	}
-	
+	window::Window win;
 
+	
+	
+	Fl::run();
 	return 0;
 }

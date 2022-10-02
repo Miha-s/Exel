@@ -4,8 +4,8 @@ namespace parser {
 	using namespace std;
 
 	vector<Tocken> Tockenizer::parse(const string& expression) {
-		vector<Tocken> tockens;
-		Tocken current;
+		tockens.clear();
+		current = WHITESPACE;
 		int brackets = 0;
 
 		for(auto iter = expression.cbegin(); iter != expression.cend(); iter++) {
@@ -26,9 +26,9 @@ namespace parser {
 				} else if(current.mType == STRING_LITERAL) {
 					current.mText.append(1, *iter);
 					current.mType = CELL;
-					endTocken(current, tockens);
+					endTocken();
 				} else {
-					endTocken(current, tockens);
+					endTocken();
 					current.mType = INTEGER_LITERAL;
 					current.mText.append(1, *iter);
 				}
@@ -39,16 +39,16 @@ namespace parser {
 			case '*':
 			case '%':
 			case '^':
-				endTocken(current, tockens);
+				endTocken();
 				current.mText.append(1, *iter);
 				current.mType = OPERATOR;
-				endTocken(current, tockens);
+				endTocken();
 				break;
 			case ',':
-				endTocken(current, tockens);
+				endTocken();
 				current.mText.append(1, *iter);
 				current.mType = COMMA;
-				endTocken(current, tockens);
+				endTocken();
 				break;
 			case ')':
 			case '(':
@@ -58,10 +58,10 @@ namespace parser {
 					brackets--;
 				else
 					throw exception();
-				endTocken(current, tockens);
+				endTocken();
 				current.mType = BRACKET;
 				current.mText.append(1, *iter);
-				endTocken(current, tockens);
+				endTocken();
 				break;
 			default:
 				if((*iter >= 'a' && *iter <= 'z') || (*iter >= 'A' && *iter <= 'Z'))
@@ -76,13 +76,13 @@ namespace parser {
 				break;
 			}
 		}
-		sub_divide_tockens(tockens);
+		sub_divide_tockens();
 		tockens.push_back(Tocken(WHITESPACE));
 		return tockens;
 	}
-	void Tockenizer::sub_divide_tockens(tocken_vec& vec)
+	void Tockenizer::sub_divide_tockens()
 	{
-		for(auto& elem : vec) {
+		for(auto& elem : tockens) {
 			if(elem.mType == OPERATOR) {
 				switch (elem.mText[0])
 				{
@@ -120,15 +120,15 @@ namespace parser {
 		}
 	}
 
-	void Tockenizer::endTocken(Tocken& tock, vector<Tocken>& vec) 
+	void Tockenizer::endTocken() 
 	{
-		if(tock.mType == POTENTIAL_CELL)
+		if(current.mType == POTENTIAL_CELL)
 			throw exception();
-		if(tock.mType != WHITESPACE)
-			vec.push_back(tock);
+		if(current.mType != WHITESPACE)
+			tockens.push_back(current);
 
-		tock.mText.erase();
-		tock.mType = WHITESPACE;
+		current.mText.erase();
+		current.mType = WHITESPACE;
 	}
 
 }

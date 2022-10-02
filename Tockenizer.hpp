@@ -37,10 +37,12 @@ namespace parser
 	typedef vector<Tocken> tocken_vec;
 
 	class Tockenizer {
+			tocken_vec tockens;
+			Tocken current;
 		public:
-			vector<Tocken> parse(const string& expression); 
+			tocken_vec parse(const string& expression); 
 		private:
-			void sub_divide_tockens(tocken_vec& vec);
-			void endTocken(Tocken& tock, vector<Tocken>& vec);
+			void sub_divide_tockens();
+			void endTocken();
 	};
 }; // namespace parser

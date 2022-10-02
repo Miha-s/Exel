@@ -1,5 +1,5 @@
 
 
 
-calc: 
-	g++ -g -Wall main.cpp Parser.cpp Tockenizer.cpp -o calc
+calc: main.cpp Parser.cpp Tockenizer.cpp
+	g++ -g -Wall main.cpp Parser.cpp Tockenizer.cpp -lfltk -o calc
