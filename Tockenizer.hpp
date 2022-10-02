@@ -1,5 +1,6 @@
 #include <string>
 #include <vector>
+#include <locale>
 
 
 namespace parser
@@ -39,6 +40,7 @@ namespace parser
 		public:
 			vector<Tocken> parse(const string& expression); 
 		private:
+			void sub_divide_tockens(tocken_vec& vec);
 			void endTocken(Tocken& tock, vector<Tocken>& vec);
 	};
 }; // namespace parser

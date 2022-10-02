@@ -8,8 +8,14 @@ int main()
 	Tockenizer tock;
 	Parser pars(tock);
 
-	auto vec = pars.parse("mmax(123, 44^1, 34*3-1^3)");
-	(void)vec;
+	string expr;
+	while (true)
+	{
+		// mmax(mmin(2+4, 3^2, 5*6), (2-1)-40, 234)
+		getline(cin, expr);
+		cout << pars.parse(expr) << endl;
+	}
+	
 
 	return 0;
 }

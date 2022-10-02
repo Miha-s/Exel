@@ -78,6 +78,7 @@ namespace parser {
 		string text = current().mText;
 		double arg;
 		vector<double> parameters;
+		TockenType func;
 
 
 		switch (current().mType)
@@ -92,15 +93,16 @@ namespace parser {
 			return arg;
 		case MMAX:
 		case MMIN:
+			func = current().mType;
 			advance();
-			advance();
-			while(current().mType != BRACKET) {
-				parameters.push_back(add_expr());
+			do {
 				advance();
-			}
+				parameters.push_back(add_expr());
+			} while(current().mType != BRACKET);
+			advance();
 			if(parameters.size() == 0)
 				throw exception();
-			if(current().mType == MMAX)
+			if(func == MMAX)
 				return *max_element(parameters.begin(), parameters.end());
 			else	
 				return *min_element(parameters.begin(), parameters.end());

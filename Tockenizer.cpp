@@ -63,30 +63,6 @@ namespace parser {
 				current.mText.append(1, *iter);
 				endTocken(current, tockens);
 				break;
-			case 'M':
-			case 'm':
-				if((iter+1) != expression.cend() && tolower(*(iter+1)) == 'm')
-				if((iter+2) != expression.cend() && tolower(*(iter+2)) == 'a')
-				if((iter+3) != expression.cend() && tolower(*(iter+3)) == 'x')
-				{
-					endTocken(current, tockens);
-					current.mText.append("mmax");
-					current.mType = MMAX;
-					endTocken(current, tockens);
-					iter += 3;
-					continue;
-				}
-				if((iter+1) != expression.cend() && tolower(*(iter+1)) == 'm')
-				if((iter+2) != expression.cend() && tolower(*(iter+2)) == 'i')
-				if((iter+3) != expression.cend() && tolower(*(iter+3)) == 'n')
-				{
-					endTocken(current, tockens);
-					current.mText.append("mmin");
-					current.mType = MMIN;
-					endTocken(current, tockens);
-					iter += 3;
-					continue;
-				}
 			default:
 				if((*iter >= 'a' && *iter <= 'z') || (*iter >= 'A' && *iter <= 'Z'))
 				{
@@ -100,9 +76,48 @@ namespace parser {
 				break;
 			}
 		}
-
+		sub_divide_tockens(tockens);
 		tockens.push_back(Tocken(WHITESPACE));
 		return tockens;
+	}
+	void Tockenizer::sub_divide_tockens(tocken_vec& vec)
+	{
+		for(auto& elem : vec) {
+			if(elem.mType == OPERATOR) {
+				switch (elem.mText[0])
+				{
+				case '+':
+					elem.mType = ADD;
+					break;
+				case '-':
+					elem.mType = SUBSTRACT;
+					break;
+				case '*': 
+					elem.mType = MULTIPLY;
+					break;
+				case '/':
+					elem.mType = DIVIDE;
+					break;
+				case '%':
+					elem.mType = MOD;
+					break;
+				case '^':
+					elem.mType = POW;
+					break;
+				default:
+					break;
+				}
+			} else if(elem.mType == STRING_LITERAL) {
+				if(elem.mText == "mmax") 
+					elem.mType = MMAX;
+				else if(elem.mText == "mmin")
+					elem.mType = MMIN;
+				else if(elem.mText.size() == 2 && isdigit(elem.mText[0]) && isalpha(elem.mText[1]))
+					elem.mType = CELL;
+				else
+					throw exception();
+			}
+		}
 	}
 
 	void Tockenizer::endTocken(Tocken& tock, vector<Tocken>& vec) 
