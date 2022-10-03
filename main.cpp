@@ -7,14 +7,10 @@ using namespace window;
 
 int main() 
 {
-
-	Tockenizer tock;
-	Parser pars(tock);
-
 	string expr;
 	window::Window win;
 
-	
+	std::cout << to_string(123.123) << std::endl;
 	
 	Fl::run();
 	return 0;

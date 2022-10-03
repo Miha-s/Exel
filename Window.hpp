@@ -24,24 +24,24 @@ namespace window
 		shared_ptr<Fl_Group> input_group;
 		shared_ptr<Fl_Input> pos_input;
 		shared_ptr<Fl_Input> expr_input;
+		Table tab;
+		pair<Fl_Input*, Table*> tab_input;
 	public:
 		Window()
 		{
-			int x = 800;
-			int y = 500;
+
 			int sp = 10;
 			int menu_height = 30;
 			int input_height = 25;
 			int pos_width = 50;
-			int input_width = 300;
-			
+			int tab_w = 80;
+			int tab_h = 40;
+			int cols = 10;
+			int rows = 8;
+			int x = (cols+1)*tab_w;
+			int y = (rows+1)*tab_h + 2*sp + input_height + menu_height;
 			win.reset(new Fl_Window(x, y, "MyExel"));
 			win->size_range(400, 200);
-
-
-			Fl_Group* gr = new Fl_Group(0, y, x, 30);
-			win->resizable(gr);
-			gr->end();
 
 			menu_bar.reset(new Fl_Menu_Bar(0, 0, x, menu_height));
 			menu_bar->add("Save|Open|Clear|@<|@>|@2>|@2<");
@@ -53,7 +53,13 @@ namespace window
 			input_group->resizable(expr_input.get());
 			input_group->end();
 
-			MyTable* tb (new MyTable(0, input_group->y() + input_group->h(), x, 500));
+			tab = Table(tab_w, tab_h, 0, input_group->y() + input_group->h(), rows, cols);
+			auto table_gr = tab.as_group();
+
+			Fl_Group* fill_win = new Fl_Group(table_gr->x(), table_gr->y(), x, y - table_gr->y());
+			win->add(fill_win);
+			win->resizable(fill_win);
+			fill_win->add(table_gr.get());
 
 			win->show();
 		}

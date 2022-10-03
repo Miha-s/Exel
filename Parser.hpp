@@ -1,8 +1,10 @@
+#pragma once
 #include "Tockenizer.hpp"
 #include <iostream>
 #include <sstream>
 #include <cmath>
 #include <algorithm>
+#include <functional>
 
 namespace parser {
 	using namespace std;
@@ -18,8 +20,9 @@ namespace parser {
 			if(iter++ == tockens.end())
 				throw exception();
 		}
+		function<double(string)> get_cell;
 	public:
-		Parser(Tockenizer& tok) : tockenizer(tok) {}
+		Parser(Tockenizer& tok, function<double(string)> func) : tockenizer(tok) {}
 		double parse(const string& expression);
 		double add_expr();
 		double mul_expr();

@@ -1,7 +1,12 @@
+#pragma once
 #include <FL/Fl.H>
 #include <FL/Fl_Table.H>
 #include <FL/fl_draw.H>
+#include <Fl/Fl_Input.H>
+#include <memory>
 #include <string>
+#include <list>
+#include "Parser.hpp"
 
 
 #define MAX_ROWS 30
@@ -11,86 +16,143 @@
 
 namespace window {	
 	using namespace std;
+	using namespace parser;
 	struct Cell 
 	{
-		string data;
 		string expr;
-		Cell(string expr_, string& data_) : data(data_), expr(expr_) {}
+		shared_ptr<Fl_Input> the_cell;
+		Cell(string expr_, int x, int y, int w, int h) : expr(expr_) {
+			the_cell.reset(new Fl_Input(x, y, w, h));
+			the_cell->box(FL_BORDER_BOX);
+			//the_cell->color(FL_BACKGROUND_COLOR);
+			the_cell->value(expr.c_str());
+		}
+		Cell(Cell&& c) {
+			expr = move(c.expr);
+			the_cell = move(c.the_cell);
+		}
 		Cell() {}
 	};
-
-	// Derive a class from Fl_Table
-	class MyTable : public Fl_Table {
-
-		Cell data[MAX_ROWS][MAX_COLS];         // data array for cells
-
-		// Draw the row/col headings
-		//    Make this a dark thin upbox with the text inside.
-		//
-		void DrawHeader(const char *s, int X, int Y, int W, int H) {
-			fl_push_clip(X,Y,W,H);
-			fl_draw_box(FL_THIN_UP_BOX, X,Y,W,H, row_header_color());
-			fl_color(FL_BLACK);
-			fl_draw(s, X,Y,W,H, FL_ALIGN_CENTER);
-			fl_pop_clip();
+	
+	struct TestCell : public Fl_Input
+	{
+		string expr;
+		TestCell(string expr_, int x, int y, int w, int h) : Fl_Input(x, y, w, h), expr(expr_) {
+			this->box(FL_BORDER_BOX);
+			//the_cell->color(FL_BACKGROUND_COLOR);
+			this->value(expr.c_str());
 		}
-		// Draw the cell data
-		//    Dark gray text on white background with subtle border
-		//
-		void DrawData(const char *s, int X, int Y, int W, int H) {
-			fl_push_clip(X,Y,W,H);
-			// Draw cell bg
-			fl_color(FL_WHITE); fl_rectf(X,Y,W,H);
-			// Draw cell data
-			fl_color(FL_GRAY0); fl_draw(s, X,Y,W,H, FL_ALIGN_CENTER);
-			// Draw box border
-			fl_color(color()); fl_rect(X,Y,W,H);
-			fl_pop_clip();
+		// TestCell(TestCell&& c) {
+		// 	expr = move(c.expr);
+		// 	this
+		// }
+		TestCell() : Fl_Input(0, 0, 0, 0) {}
+	};
+	
+	class Table {
+		list<list<Cell>> the_table;
+		list<Cell> row;
+		list<Cell> col;
+		shared_ptr<Fl_Group> table_gr;
+		int cell_w;
+		int cell_h;
+		Tockenizer tock{};
+		list<Cell>::iterator at(pair<int, int> coord) {
+			auto iter = the_table.begin();
+			for(int i = 0; i < coord.first; i++)  { iter++; }
+			auto iter2 = iter->begin();
+			for(int i = 0; i < coord.second; i++) { iter2++; }
+			return iter2;
 		}
-		// Handle drawing table's cells
-		//     Fl_Table calls this function to draw each visible cell in the table.
-		//     It's up to us to use FLTK's drawing functions to draw the cells the way we want.
-		//
-		void draw_cell(TableContext context, int ROW=0, int COL=0, int X=0, int Y=0, int W=0, int H=0) {
-			static char s[40];
-			const char *cs;
-			switch ( context ) {
-			case CONTEXT_STARTPAGE:                   // before page is drawn..
-				fl_font(FL_HELVETICA, 16);              // set the font for our drawing operations
-				return;
-			case CONTEXT_COL_HEADER:                  // Draw column headers
-				sprintf(s,"%c", COL+1);                // "A", "B", "C", etc.
-				DrawHeader(s,X,Y,W,H);
-				return;
-			case CONTEXT_ROW_HEADER:                  // Draw row headers
-				sprintf(s,"%03d:", 'A' + ROW);                 // "001:", "002:", etc
-				DrawHeader(s,X,Y,W,H);
-				return;
-			case CONTEXT_CELL:                        // Draw data in cells
-				cs = data[ROW][COL].data.c_str();
-				DrawData(cs,X,Y,W,H);
-				return;
-			default:
-				return;
+		Parser par{tock, [&](string a) -> double {
+			auto coords = get_coord(a);
+			auto iter = at(coords);
+			return get_expression(*iter);
+		}};
+		pair<int, int> get_coord(string coord) {
+			pair<int, int> coords;
+			coords.first = coord[0] - 'A';
+			coords.second = coord[1] - '1';
+			return coords;
+		}
+
+		std::pair<Fl_Input*, Fl_Input*> inputs;
+	public:
+		Table() {}
+		void operator=(Table&& tb) {
+			the_table = move(tb.the_table);
+			row = move(tb.row);
+			col = move(tb.col);
+			table_gr = move(tb.table_gr);
+			cell_w = tb.cell_w;
+			cell_h = tb.cell_h;
+		}
+		Table(int w, int h, int x, int y, int rows, int cols) :
+			cell_w(w), cell_h(h)
+		{
+			table_gr.reset(new Fl_Group(x, y,  (cols+2)*w, (rows+2)*h));
+			auto invis = new Cell("asdf", x + (cols+1)*w, y + (rows+1)*h, w, h);
+			invis->the_cell->hide();
+			table_gr->add(invis->the_cell.get());
+			table_gr->resizable(invis->the_cell.get());
+			int rowx = x;
+			int rowy = y + h;
+			int colx = x + w;
+			int coly = y;
+			string tmp;
+
+			for(int i = 0; i < rows; i++) {
+				tmp = 'A';
+				tmp[0] += i;
+				Cell c(tmp, rowx, rowy + i*h, w, h);
+				c.the_cell->readonly(true);
+				row.push_back(move(c));
+			}
+			for(int i = 0; i < cols; i++) {
+				Cell c(to_string(i+1) , colx + i*w, coly, w, h);
+				c.the_cell->readonly(true);
+				row.push_back(move(c));
+			}
+
+			int cellx = x + w;
+			int celly = y + h;
+			for(int i = 0; i < rows; i++) {
+				the_table.push_back(list<Cell>());
+				for(int j = 0; j < cols; j++) {
+					the_table.back().push_back(Cell("", cellx + j*w, celly + i*h, w, h));
+					table_gr->add(the_table.back().back().the_cell.get());
+				}
+			}
+			table_gr->end();
+		}
+
+		double get_expression(Cell& the_cell) {
+			if(the_cell.expr[0] == '=')
+				return par.parse(string(the_cell.expr).erase(0, 1));
+			else
+				return par.parse(the_cell.expr);
+		}
+
+		void setExpr(string coord, string expr) {
+			auto coords = get_coord(coord);
+			auto iter = at(coords);
+			iter->expr = expr;
+			renew();
+		}
+		void set_inputs(Fl_Input* one, Fl_Input* two) {
+			inputs.first = one;
+			inputs.second = two;
+		}
+		void renew() {
+			auto iter = the_table.begin();
+			for(auto& vec : the_table) {
+				for(auto& elem : vec) {
+					double res = get_expression(elem);
+					elem.the_cell->value(to_string(res).c_str());
+				}
 			}
 		}
-		public:
-		// Constructor
-		//     Make our data array, and initialize the table options.
-		//
-		MyTable(int X, int Y, int W, int H, const char *L=0) : Fl_Table(X,Y,W,H,L) {
-			// Rows
-			rows(MAX_ROWS);             // how many rows
-			row_header(1);              // enable row headers (along left)
-			row_height_all(20);         // default height of rows
-			row_resize(0);              // disable row resizing
-			// Cols
-			cols(MAX_COLS);             // how many columns
-			col_header(1);              // enable column headers (along top)
-			col_width_all(80);          // default width of columns
-			col_resize(1);              // enable column resizing
-			end();                      // end the Fl_Table group
-		}
-		~MyTable() { }
+
+		shared_ptr<Fl_Group> as_group() { return table_gr; }
 	};
 }
