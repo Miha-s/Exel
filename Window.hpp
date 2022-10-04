@@ -1,4 +1,4 @@
-
+#pragma once
 #include <utility>
 #include <FL/Fl.H>
 #include <FL/Fl_Window.H>
@@ -11,6 +11,7 @@
 #include <FL/Fl_Menu_Bar.H>
 #include <memory>
 
+#include "Callbacks.hpp"
 #include "Table.hpp"
 
 namespace window
@@ -24,7 +25,7 @@ namespace window
 		shared_ptr<Fl_Group> input_group;
 		shared_ptr<Fl_Input> pos_input;
 		shared_ptr<Fl_Input> expr_input;
-		Table tab;
+		window::Table tab;
 		pair<Fl_Input*, Table*> tab_input;
 	public:
 		Window()
@@ -52,9 +53,15 @@ namespace window
 			expr_input.reset(new Fl_Input(2*sp + pos_width, input_group->y() + sp, x - 3*sp - pos_width, input_height));
 			input_group->resizable(expr_input.get());
 			input_group->end();
+	
 
 			tab = Table(tab_w, tab_h, 0, input_group->y() + input_group->h(), rows, cols);
+			tab.set_inputs(pos_input.get(), expr_input.get());
 			auto table_gr = tab.as_group();
+			tab_input.first = pos_input.get();
+			tab_input.second = &tab;
+			expr_input->callback(enter_expression_call, (void*)&tab_input);
+			expr_input->when(FL_KEYDOWN);
 
 			Fl_Group* fill_win = new Fl_Group(table_gr->x(), table_gr->y(), x, y - table_gr->y());
 			win->add(fill_win);

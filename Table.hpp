@@ -6,7 +6,12 @@
 #include <memory>
 #include <string>
 #include <list>
+#include <sstream>
+#include <exception>
 #include "Parser.hpp"
+#include "Callbacks.hpp"
+#include <iomanip>
+
 
 
 #define MAX_ROWS 30
@@ -17,27 +22,11 @@
 namespace window {	
 	using namespace std;
 	using namespace parser;
-	struct Cell 
+	struct Cell : public Fl_Input
 	{
 		string expr;
-		shared_ptr<Fl_Input> the_cell;
-		Cell(string expr_, int x, int y, int w, int h) : expr(expr_) {
-			the_cell.reset(new Fl_Input(x, y, w, h));
-			the_cell->box(FL_BORDER_BOX);
-			//the_cell->color(FL_BACKGROUND_COLOR);
-			the_cell->value(expr.c_str());
-		}
-		Cell(Cell&& c) {
-			expr = move(c.expr);
-			the_cell = move(c.the_cell);
-		}
-		Cell() {}
-	};
-	
-	struct TestCell : public Fl_Input
-	{
-		string expr;
-		TestCell(string expr_, int x, int y, int w, int h) : Fl_Input(x, y, w, h), expr(expr_) {
+		string coords;
+		Cell(string expr_, int x, int y, int w, int h) : Fl_Input(x, y, w, h), expr(expr_) {
 			this->box(FL_BORDER_BOX);
 			//the_cell->color(FL_BACKGROUND_COLOR);
 			this->value(expr.c_str());
@@ -46,18 +35,18 @@ namespace window {
 		// 	expr = move(c.expr);
 		// 	this
 		// }
-		TestCell() : Fl_Input(0, 0, 0, 0) {}
+		Cell() : Fl_Input(0, 0, 0, 0) {}
 	};
 	
 	class Table {
-		list<list<Cell>> the_table;
-		list<Cell> row;
-		list<Cell> col;
+		list<list<Cell*>> the_table;
+		list<Cell*> row;
+		list<Cell*> col;
 		shared_ptr<Fl_Group> table_gr;
 		int cell_w;
 		int cell_h;
 		Tockenizer tock{};
-		list<Cell>::iterator at(pair<int, int> coord) {
+		list<Cell*>::iterator at(pair<int, int> coord) {
 			auto iter = the_table.begin();
 			for(int i = 0; i < coord.first; i++)  { iter++; }
 			auto iter2 = iter->begin();
@@ -71,12 +60,12 @@ namespace window {
 		}};
 		pair<int, int> get_coord(string coord) {
 			pair<int, int> coords;
-			coords.first = coord[0] - 'A';
+			coords.first = toupper(coord[0]) - 'A';
 			coords.second = coord[1] - '1';
 			return coords;
 		}
 
-		std::pair<Fl_Input*, Fl_Input*> inputs;
+		std::pair<Fl_Input*, Fl_Input*>* inputs;
 	public:
 		Table() {}
 		void operator=(Table&& tb) {
@@ -86,15 +75,16 @@ namespace window {
 			table_gr = move(tb.table_gr);
 			cell_w = tb.cell_w;
 			cell_h = tb.cell_h;
+			inputs = tb.inputs;
 		}
 		Table(int w, int h, int x, int y, int rows, int cols) :
 			cell_w(w), cell_h(h)
 		{
 			table_gr.reset(new Fl_Group(x, y,  (cols+2)*w, (rows+2)*h));
 			auto invis = new Cell("asdf", x + (cols+1)*w, y + (rows+1)*h, w, h);
-			invis->the_cell->hide();
-			table_gr->add(invis->the_cell.get());
-			table_gr->resizable(invis->the_cell.get());
+			invis->hide();
+			table_gr->add(invis);
+			table_gr->resizable(invis);
 			int rowx = x;
 			int rowy = y + h;
 			int colx = x + w;
@@ -104,55 +94,93 @@ namespace window {
 			for(int i = 0; i < rows; i++) {
 				tmp = 'A';
 				tmp[0] += i;
-				Cell c(tmp, rowx, rowy + i*h, w, h);
-				c.the_cell->readonly(true);
+				Cell* c = new Cell(tmp, rowx, rowy + i*h, w, h);
+				c->readonly(true);
 				row.push_back(move(c));
 			}
 			for(int i = 0; i < cols; i++) {
-				Cell c(to_string(i+1) , colx + i*w, coly, w, h);
-				c.the_cell->readonly(true);
+				Cell* c = new Cell(to_string(i+1) , colx + i*w, coly, w, h);
+				c->readonly(true);
 				row.push_back(move(c));
 			}
 
 			int cellx = x + w;
 			int celly = y + h;
 			for(int i = 0; i < rows; i++) {
-				the_table.push_back(list<Cell>());
+				the_table.push_back(list<Cell*>());
 				for(int j = 0; j < cols; j++) {
-					the_table.back().push_back(Cell("", cellx + j*w, celly + i*h, w, h));
-					table_gr->add(the_table.back().back().the_cell.get());
+					the_table.back().push_back(new Cell("", cellx + j*w, celly + i*h, w, h));
+					auto the_cell = the_table.back().back();
+					the_cell->coords = getCoordName(i, j);
+					table_gr->add(the_table.back().back());
 				}
 			}
 			table_gr->end();
 		}
-
-		double get_expression(Cell& the_cell) {
-			if(the_cell.expr[0] == '=')
-				return par.parse(string(the_cell.expr).erase(0, 1));
-			else
-				return par.parse(the_cell.expr);
+		double string_to_double(string str) {
+			size_t a = 0;
+			double tmp = stod(str, &a);
+			if(a != str.size())
+				throw runtime_error("not full number");
+			return tmp;
+		}
+		double get_expression(Cell* the_cell) {
+			if(the_cell->expr[0] == '=')
+				return par.parse(string(the_cell->expr).erase(0, 1));
+			else {
+				return string_to_double(the_cell->expr);
+			}
+				
 		}
 
 		void setExpr(string coord, string expr) {
 			auto coords = get_coord(coord);
 			auto iter = at(coords);
-			iter->expr = expr;
+			(*iter)->expr = expr;
 			renew();
 		}
 		void set_inputs(Fl_Input* one, Fl_Input* two) {
-			inputs.first = one;
-			inputs.second = two;
+			inputs = new pair<Fl_Input*, Fl_Input*>;
+			inputs->first = one;
+			inputs->second = two;
+			for(auto& vec : the_table)
+			for(auto& elem : vec) {
+					elem->callback(press_cell_call, (void*)inputs);
+					elem->when(FL_FOCUS);
+			}
 		}
 		void renew() {
-			auto iter = the_table.begin();
 			for(auto& vec : the_table) {
 				for(auto& elem : vec) {
-					double res = get_expression(elem);
-					elem.the_cell->value(to_string(res).c_str());
+					double res;
+					if(!elem->expr.empty()) {
+						try {
+							res = get_expression(elem);
+							elem->value(tostring(res).c_str());
+						} 
+						catch(exception& ex) {
+							cout << "Error: " << ex.what() << endl;
+							elem->value(elem->expr.c_str());
+						}
+					} else {
+						elem->value("");
+					}
 				}
 			}
 		}
-
+		string tostring(double num) {
+			stringstream strg;
+			strg << fixed;
+			strg << setprecision(2);
+			strg << num;
+			return strg.str();
+		}
+		string getCoordName(int i, int j) {
+			string s;
+			s += char('A' + i);
+			s += to_string(1+j);
+			return s;
+		}
 		shared_ptr<Fl_Group> as_group() { return table_gr; }
 	};
 }

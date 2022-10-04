@@ -22,7 +22,7 @@ namespace parser {
 		}
 		function<double(string)> get_cell;
 	public:
-		Parser(Tockenizer& tok, function<double(string)> func) : tockenizer(tok) {}
+		Parser(Tockenizer& tok, function<double(string)> func) : tockenizer(tok), get_cell(func) {}
 		double parse(const string& expression);
 		double add_expr();
 		double mul_expr();

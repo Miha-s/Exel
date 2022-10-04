@@ -23,10 +23,9 @@ namespace parser {
 			case '9':
 				if(current.mType == INTEGER_LITERAL) {
 					current.mText.append(1, *iter);
-				} else if(current.mType == STRING_LITERAL) {
+				} else if(current.mType == STRING_LITERAL || current.mType == CELL) {
 					current.mText.append(1, *iter);
 					current.mType = CELL;
-					endTocken();
 				} else {
 					endTocken();
 					current.mType = INTEGER_LITERAL;
@@ -57,7 +56,7 @@ namespace parser {
 				else if(brackets > 0)
 					brackets--;
 				else
-					throw exception();
+					throw runtime_error("closed to many brackets");
 				endTocken();
 				current.mType = BRACKET;
 				current.mText.append(1, *iter);
@@ -67,15 +66,18 @@ namespace parser {
 				if((*iter >= 'a' && *iter <= 'z') || (*iter >= 'A' && *iter <= 'Z'))
 				{
 					if(current.mType != WHITESPACE && current.mType != STRING_LITERAL)
-						throw exception();
+						throw runtime_error("bad literal");
 					current.mType = STRING_LITERAL;
 					current.mText.append(1, tolower(*iter));
 				} else if (*iter != ' ' && *iter != '\t' && *iter != '\n') {
-					throw exception();
+					throw runtime_error("unknown symbol");
 				}
 				break;
 			}
 		}
+		if(brackets > 0)
+			throw runtime_error("unclosed bracket");
+		endTocken();
 		sub_divide_tockens();
 		tockens.push_back(Tocken(WHITESPACE));
 		return tockens;
@@ -122,8 +124,6 @@ namespace parser {
 
 	void Tockenizer::endTocken() 
 	{
-		if(current.mType == POTENTIAL_CELL)
-			throw exception();
 		if(current.mType != WHITESPACE)
 			tockens.push_back(current);
 

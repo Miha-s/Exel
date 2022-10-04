@@ -101,13 +101,15 @@ namespace parser {
 			} while(current().mType != BRACKET);
 			advance();
 			if(parameters.size() == 0)
-				throw exception();
+				throw runtime_error("too few parameters to funciton");
 			if(func == MMAX)
 				return *max_element(parameters.begin(), parameters.end());
 			else	
 				return *min_element(parameters.begin(), parameters.end());
+		case CELL:
+			return get_cell(current().mText);
 		default:
-			throw exception();
+			throw runtime_error("unknown tocken");
 		}
 	}
 }
