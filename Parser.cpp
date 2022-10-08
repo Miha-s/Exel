@@ -79,6 +79,7 @@ namespace parser {
 		double arg;
 		vector<double> parameters;
 		TockenType func;
+		string tmp_expr;
 
 
 		switch (current().mType)
@@ -107,7 +108,9 @@ namespace parser {
 			else	
 				return *min_element(parameters.begin(), parameters.end());
 		case CELL:
-			return get_cell(current().mText);
+			tmp_expr = current().mText;
+			advance();
+			return get_cell(tmp_expr);
 		default:
 			throw runtime_error("unknown tocken");
 		}

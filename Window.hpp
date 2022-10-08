@@ -39,8 +39,8 @@ namespace window
 			int tab_h = 40;
 			int cols = 10;
 			int rows = 8;
-			int x = (cols+1)*tab_w;
-			int y = (rows+1)*tab_h + 2*sp + input_height + menu_height;
+			int x = (cols+2)*tab_w;
+			int y = (rows+2)*tab_h + 2*sp + input_height + menu_height;
 			win.reset(new Fl_Window(x, y, "MyExel"));
 			win->size_range(400, 200);
 
@@ -67,6 +67,9 @@ namespace window
 			win->add(fill_win);
 			win->resizable(fill_win);
 			fill_win->add(table_gr.get());
+
+			menu_bar->add("test", 0, add_row_call, (void*)&tab);
+			menu_bar->add("test2", 0, add_col_call, (void*)&tab);
 
 			win->show();
 		}

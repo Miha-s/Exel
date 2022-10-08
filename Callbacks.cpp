@@ -16,4 +16,18 @@ void press_cell_call(Fl_Widget* widget, void* data)
 	inputs->first->value(cell->coords.c_str());
 	inputs->second->value(cell->expr.c_str());
 	inputs->second->take_focus();
+	inputs->first->redraw();
+	inputs->second->redraw();
+}
+
+void add_row_call(Fl_Widget* widget, void* data)
+{
+	auto table = (window::Table*)data;
+	table->add_row();
+}
+
+void add_col_call(Fl_Widget* widget, void* data)
+{
+	auto table = (window::Table*)data;
+	table->add_col();
 }

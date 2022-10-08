@@ -22,6 +22,7 @@
 namespace window {	
 	using namespace std;
 	using namespace parser;
+
 	struct Cell : public Fl_Input
 	{
 		string expr;
@@ -31,10 +32,6 @@ namespace window {
 			//the_cell->color(FL_BACKGROUND_COLOR);
 			this->value(expr.c_str());
 		}
-		// TestCell(TestCell&& c) {
-		// 	expr = move(c.expr);
-		// 	this
-		// }
 		Cell() : Fl_Input(0, 0, 0, 0) {}
 	};
 	
@@ -42,6 +39,7 @@ namespace window {
 		list<list<Cell*>> the_table;
 		list<Cell*> row;
 		list<Cell*> col;
+		Cell* invis;
 		shared_ptr<Fl_Group> table_gr;
 		int cell_w;
 		int cell_h;
@@ -76,13 +74,15 @@ namespace window {
 			cell_w = tb.cell_w;
 			cell_h = tb.cell_h;
 			inputs = tb.inputs;
+			invis = tb.invis;
 		}
+
 		Table(int w, int h, int x, int y, int rows, int cols) :
 			cell_w(w), cell_h(h)
 		{
 			table_gr.reset(new Fl_Group(x, y,  (cols+2)*w, (rows+2)*h));
-			auto invis = new Cell("asdf", x + (cols+1)*w, y + (rows+1)*h, w, h);
-			invis->hide();
+			invis = new Cell("asdf", x + (cols+1)*w , y + (rows+1)*h , w, h);
+			//invis->hide();
 			table_gr->add(invis);
 			table_gr->resizable(invis);
 			int rowx = x;
@@ -91,9 +91,9 @@ namespace window {
 			int coly = y;
 			string tmp;
 
+
 			for(int i = 0; i < rows; i++) {
-				tmp = 'A';
-				tmp[0] += i;
+				tmp = getCoords(pair<int, int>(i, 0));
 				Cell* c = new Cell(tmp, rowx, rowy + i*h, w, h);
 				c->readonly(true);
 				row.push_back(move(c));
@@ -101,7 +101,7 @@ namespace window {
 			for(int i = 0; i < cols; i++) {
 				Cell* c = new Cell(to_string(i+1) , colx + i*w, coly, w, h);
 				c->readonly(true);
-				row.push_back(move(c));
+				col.push_back(move(c));
 			}
 
 			int cellx = x + w;
@@ -111,12 +111,55 @@ namespace window {
 				for(int j = 0; j < cols; j++) {
 					the_table.back().push_back(new Cell("", cellx + j*w, celly + i*h, w, h));
 					auto the_cell = the_table.back().back();
-					the_cell->coords = getCoordName(i, j);
+					the_cell->coords = getCoords(pair<int, int>(i, j+1));
 					table_gr->add(the_table.back().back());
 				}
 			}
 			table_gr->end();
 		}
+
+		void add_row() {
+			string row_pos; 
+			row_pos = getCoords(pair<int, int>(the_table.size(), 0));
+			the_table.push_back(list<Cell*>());
+			int x = row.back()->x();
+			int y = row.back()->y();
+			y += cell_h;
+			row.push_back(new Cell(row_pos, x, y, cell_w, cell_h));
+			table_gr->add(row.back());
+			x += cell_w;
+			auto& last = the_table.back();
+			for(unsigned int i = 0; i < the_table.front().size(); i++) {
+				last.push_back(new Cell("", x + i*cell_w, y, cell_w, cell_h));
+				last.back()->coords = getCoords(pair<int, int> (the_table.size(), i+1));
+				table_gr->add(last.back());
+			}
+
+			invis->resize(last.back()->x() + cell_w, last.back()->y() + cell_h, invis->w(), invis->h()-cell_h);
+			table_gr->redraw();
+		}
+		void add_col() {
+			string col_pos;
+			col_pos = to_string(the_table.front().size() + 1);
+			int x = col.back()->x();
+			int y = col.back()->y();
+			x += cell_w;
+			col.push_back(new Cell(col_pos, x, y, cell_w, cell_h));
+			table_gr->add(col.back());
+			y += cell_h;
+			int i = 0;
+			string tmp;
+			for(auto &elem : the_table) {
+				elem.push_back(new Cell("", x, y + i*cell_h, cell_w, cell_h));
+				elem.back()->coords = getCoords(pair<int, int>(i, elem.size()));
+				table_gr->add(elem.back());
+				++i;
+			}
+			invis->resize(the_table.back().back()->x() + cell_w, the_table.back().back()->y() + cell_h, invis->w()-cell_w, invis->h());
+			table_gr->redraw();
+
+		}
+
 		double string_to_double(string str) {
 			size_t a = 0;
 			double tmp = stod(str, &a);
@@ -130,7 +173,6 @@ namespace window {
 			else {
 				return string_to_double(the_cell->expr);
 			}
-				
 		}
 
 		void setExpr(string coord, string expr) {
@@ -175,12 +217,21 @@ namespace window {
 			strg << num;
 			return strg.str();
 		}
-		string getCoordName(int i, int j) {
-			string s;
-			s += char('A' + i);
-			s += to_string(1+j);
-			return s;
-		}
+
 		shared_ptr<Fl_Group> as_group() { return table_gr; }
+
+		string getCoords(pair<int, int> coords) {
+			string res;
+			res += char('A' + coords.first);
+			if(coords.second)
+				res += to_string(coords.second);
+			return res;
+		}
+		pair<int, int> getCoords(string coords) {
+			pair<int, int> res;
+			res.first = tolower(coords[0]) - 'a';
+			res.second = string_to_double(coords.erase(0, 1));
+			return res;			
+		}
 	};
 }

@@ -7,3 +7,7 @@
 void enter_expression_call(Fl_Widget* widget, void* data);
 
 void press_cell_call(Fl_Widget* widget, void* data);
+
+void add_row_call(Fl_Widget* widget, void* data);
+
+void add_col_call(Fl_Widget* widget, void* data);
