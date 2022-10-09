@@ -4,6 +4,8 @@
 		"initializer_list": "cpp",
 		"string_view": "cpp",
 		"utility": "cpp",
-		"iostream": "cpp"
+		"iostream": "cpp",
+		"*.tcc": "cpp",
+		"ostream": "cpp"
 	}
 }
