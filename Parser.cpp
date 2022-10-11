@@ -71,6 +71,7 @@ namespace parser {
 	double Parser::mul_expr()
 	{
 		double result = pow_expr();
+		double test_zero;
 
 		for(;;) {
 			switch (current().mType)
@@ -81,6 +82,9 @@ namespace parser {
 				break;
 			case DIVIDE:
 				advance();
+				test_zero = mul_expr();
+				if(test_zero == 0)
+					throw runtime_error("Dividing by zero");
 				result /= mul_expr();
 				break;
 			case MOD:

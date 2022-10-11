@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <fstream>
 #include "Parser.hpp"
 
 using namespace std;
@@ -205,6 +206,7 @@ namespace interface {
 				}
 			}
 		}
+
 		void add_col() 
 		{
 			auto cell = make_managed<Cell>(to_string(cols), w, h, true);
@@ -281,10 +283,12 @@ namespace interface {
 		}
 
 		double string_to_double(string str) {
+			if(!str.size())
+				throw runtime_error("Empty");
 			size_t a = 0;
 			double tmp = stod(str, &a);
 			if(a != str.size())
-				throw runtime_error("not full number");
+				throw runtime_error("Not full number");
 			return tmp;
 		}
 
@@ -357,6 +361,85 @@ namespace interface {
 				cell->set_text("");
 			}
 		}
+
+		void set_n_rows(int n)
+		{
+			n++;
+			if(n < 2)
+				return ;
+			while(rows > n) {
+				rem_row();
+			}
+			while(rows < n) {
+				add_row();
+			}
+		}
+
+		void set_n_cols(int n)
+		{
+			n++;
+			if(n < 2)
+				return ;
+			while(cols > n) {
+				rem_col();
+			}
+			while(cols < n) {
+				add_col();
+			}
+		}
+
+		void save(const Glib::ustring& file_path)
+		{
+			ofstream saved_file;
+			saved_file.open(file_path);
+			saved_file << rows-1 << " " << cols-1 << endl;
+			for (int i = 1; i < rows; i++)
+			{
+				for (int j = 1; j < cols; j++)
+				{
+					auto cell_widget = get_child_at(j, i);
+					auto cell = static_cast<Cell*>(cell_widget);
+					saved_file << "\"" << cell->get_expr() << "\"";
+					if(j != cols-1)
+						saved_file << ",";	
+				}
+				saved_file << endl;
+			}
+		}
+		void load(const Glib::ustring& file_path)
+		{
+			clear();
+			ifstream saved_file;
+			string tmp;
+			saved_file.open(file_path);
+			int tmp_rows, tmp_cols;
+			getline(saved_file, tmp, ' ');
+			tmp_rows = stoi(tmp);
+			getline(saved_file, tmp, '\n');
+			tmp_cols = stoi(tmp);
+
+			set_n_cols(tmp_cols);
+			set_n_rows(tmp_rows);
+			
+			for (int i = 1; i < rows; i++)
+			{
+				for (int j = 1; j < cols; j++)
+				{
+					auto cell_widget = get_child_at(j, i);
+					auto cell = static_cast<Cell*>(cell_widget);
+
+					getline(saved_file, tmp, '\"');
+					tmp.clear();
+					getline(saved_file, tmp, '\"');
+					cout << " tmp 2: " << tmp.size() << endl;
+					cell->set_expr(tmp);
+					if(j != cols-1)
+						getline(saved_file, tmp, ',');
+				}
+			}
+
+			renew();
+		}
 	};
 
 	class ScrollableTable : public ScrolledWindow
@@ -367,7 +450,7 @@ namespace interface {
 		{
 			table = make_managed<Spreadsheet>(5, 10);
 			set_propagate_natural_width(false);
-			set_size_request(100, 100);
+			set_size_request(1000, 400);
 			set_child(*table);
 			set_expand(true);
 		}
@@ -420,7 +503,7 @@ public:
 		set_modal(true);
 		signal_response().connect([this, manage_load] (int response) {
 			if(response == ResponseType::ACCEPT) {
-				cout << "Ok" ;
+				manage_load(get_file()->get_path());
 			}
 		});
 	}
@@ -454,11 +537,16 @@ public:
 		ex_dialog.reset(new ExitDialog(*this));
 		signal_close_request().connect([this]{ ex_dialog->show(); return true; }, true);
 
-	
-		save_dialog.reset(new FileSaver(*this, [](Glib::ustring) {}));
+		save_dialog.reset(new FileSaver(*this, sigc::mem_fun(
+			*scroll_table->table, &interface::Spreadsheet::save
+		)));
+
 		menu_box->but_save->signal_clicked().connect([this]{ save_dialog->show(); });
 
-		load_dialog.reset(new FileLoader(*this, [](string){}));
+		load_dialog.reset(new FileLoader(*this, sigc::mem_fun(
+			*scroll_table->table, &interface::Spreadsheet::load
+		)));
+		
 		menu_box->but_load->signal_clicked().connect([this]{ load_dialog->show(); });
 
 		set_child(outer_box);
