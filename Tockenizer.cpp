@@ -114,12 +114,28 @@ namespace parser {
 					elem.mType = MMAX;
 				else if(elem.mText == "mmin")
 					elem.mType = MMIN;
-				else if(elem.mText.size() == 2 && isdigit(elem.mText[0]) && isalpha(elem.mText[1]))
+				else if(validateCoords(elem.mText))
 					elem.mType = CELL;
 				else
-					throw exception();
+					throw runtime_error("Unknown literal");
 			}
 		}
+	}
+	bool Tockenizer::validateCoords(const string& coords) {
+		int i = 0;
+		int size = coords.size();
+		while (i < size && isalpha(coords[i]))
+		{
+			i++;
+		}
+		if(!i) return false;
+		while (i < size && isdigit(coords[i]))
+		{
+			i++;
+		}
+		if(i != size)
+			return false;
+		return true;
 	}
 
 	void Tockenizer::endTocken() 

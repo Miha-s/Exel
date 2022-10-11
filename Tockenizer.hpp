@@ -32,6 +32,9 @@ namespace parser
 		string mText;
 		Tocken() {}
 		Tocken(TockenType t, string s = string()) : mType(t), mText(s) {}
+		bool operator==(const Tocken& other) const {
+			return (mType == other.mType) && (mText == other.mText);
+		}
 	};
 
 	typedef vector<Tocken> tocken_vec;
@@ -41,6 +44,7 @@ namespace parser
 			Tocken current;
 		public:
 			tocken_vec parse(const string& expression); 
+			bool validateCoords(const string& coords);
 		private:
 			void sub_divide_tockens();
 			void endTocken();

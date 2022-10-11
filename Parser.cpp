@@ -13,11 +13,38 @@ namespace parser {
 		ist >> x;
 		return x;
 	}
+	void Parser::save_vec_and_iter(tocken_vec& vec, tocken_vec::iterator& iter_)
+	{
+		auto dist = iter - tockens.begin();
+		vec = move(tockens);
+		iter_ = vec.begin();
+		iter_ += dist;
+	}
+	void Parser::load_vec_and_iter(tocken_vec& vec, tocken_vec::iterator& iter_)
+	{
+		auto dist = iter_ - vec.begin();
+		tockens = move(vec);
+		iter = tockens.begin();
+		iter += dist;
+	}
 	double Parser::parse(const string& expression)
 	{
+		tocken_vec tmp_vec;
+		tocken_vec::iterator tmp_iter;
+		save_vec_and_iter(tmp_vec, tmp_iter);
+
 		tockens = tockenizer.parse(expression);
 		iter = tockens.begin();
-		return add_expr();
+		double res;
+		try {
+			res = add_expr();
+		} catch(...) {
+			recursion_list.clear();
+			throw;
+		}
+		
+		load_vec_and_iter(tmp_vec, tmp_iter);
+		return res;
 	}
 
 	double Parser::add_expr()
@@ -56,6 +83,10 @@ namespace parser {
 				advance();
 				result /= mul_expr();
 				break;
+			case MOD:
+				advance();
+				result = long(result) % long(mul_expr());
+				break;
 			default:
 				return result;
 			}
@@ -80,6 +111,7 @@ namespace parser {
 		vector<double> parameters;
 		TockenType func;
 		string tmp_expr;
+		Tocken saved_tocken;
 
 
 		switch (current().mType)
@@ -108,9 +140,15 @@ namespace parser {
 			else	
 				return *min_element(parameters.begin(), parameters.end());
 		case CELL:
-			tmp_expr = current().mText;
+			if(find(recursion_list.begin(), recursion_list.end(), current()) != recursion_list.end()) {
+				throw runtime_error("Cell recurtion");
+			}
+
+			recursion_list.push_back(current());
 			advance();
-			return get_cell(tmp_expr);
+			arg = get_cell(recursion_list.back().mText);
+			recursion_list.pop_back();
+			return arg;
 		default:
 			throw runtime_error("unknown tocken");
 		}
