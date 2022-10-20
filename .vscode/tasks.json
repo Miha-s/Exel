@@ -5,8 +5,10 @@
             "label": "C/C++: g++ build active file",
             "command": "/usr/bin/make",
             "args": [
-                "calc",
-                "-B"
+                "-B",
+				"-C",
+				"${fileDirname}/..",
+				"calc"
             ],
             "options": {
                 "cwd": "${fileDirname}"

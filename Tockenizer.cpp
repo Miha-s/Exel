@@ -1,4 +1,5 @@
 #include "Tockenizer.hpp"
+#include <iostream>
 
 namespace parser {
 	using namespace std;
@@ -56,7 +57,7 @@ namespace parser {
 				else if(brackets > 0)
 					brackets--;
 				else
-					throw runtime_error("closed to many brackets");
+					throw runtime_error("BADBRACKET");
 				endTocken();
 				current.mType = BRACKET;
 				current.mText.append(1, *iter);
@@ -66,19 +67,20 @@ namespace parser {
 				if((*iter >= 'a' && *iter <= 'z') || (*iter >= 'A' && *iter <= 'Z'))
 				{
 					if(current.mType != WHITESPACE && current.mType != STRING_LITERAL)
-						throw runtime_error("bad literal");
+						throw runtime_error("BADLITERAL");
 					current.mType = STRING_LITERAL;
 					current.mText.append(1, tolower(*iter));
 				} else if (*iter != ' ' && *iter != '\t' && *iter != '\n') {
-					throw runtime_error("unknown symbol");
+					throw runtime_error("BADLITERAL");
 				}
 				break;
 			}
 		}
 		if(brackets > 0)
-			throw runtime_error("unclosed bracket");
+			throw runtime_error("BADBRACKET");
 		endTocken();
 		sub_divide_tockens();
+
 		tockens.push_back(Tocken(WHITESPACE));
 		return tockens;
 	}
@@ -117,7 +119,7 @@ namespace parser {
 				else if(validateCoords(elem.mText))
 					elem.mType = CELL;
 				else
-					throw runtime_error("Unknown literal");
+					throw runtime_error("BADLITERAL");
 			}
 		}
 	}
@@ -128,7 +130,7 @@ namespace parser {
 		{
 			i++;
 		}
-		if(!i) return false;
+		if(!(size - i)) return false;
 		while (i < size && isdigit(coords[i]))
 		{
 			i++;

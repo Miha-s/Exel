@@ -10,7 +10,11 @@ namespace parser {
 		ist.exceptions(std::ios_base::failbit);
 
 		double x;
-		ist >> x;
+		try {
+			ist >> x;
+		} catch (...) {
+			throw runtime_error("BADNUMBER");
+		}
 		return x;
 	}
 	void Parser::save_vec_and_iter(tocken_vec& vec, tocken_vec::iterator& iter_)
@@ -29,6 +33,7 @@ namespace parser {
 	}
 	double Parser::parse(const string& expression)
 	{
+		// saving previous vector of tockens
 		tocken_vec tmp_vec;
 		tocken_vec::iterator tmp_iter;
 		save_vec_and_iter(tmp_vec, tmp_iter);
@@ -84,8 +89,8 @@ namespace parser {
 				advance();
 				test_zero = mul_expr();
 				if(test_zero == 0)
-					throw runtime_error("Dividing by zero");
-				result /= mul_expr();
+					throw runtime_error("DIVZERO");
+				result /= test_zero;
 				break;
 			case MOD:
 				advance();
@@ -138,14 +143,14 @@ namespace parser {
 			} while(current().mType != BRACKET);
 			advance();
 			if(parameters.size() == 0)
-				throw runtime_error("too few parameters to funciton");
+				throw runtime_error("NOPARAMETERS");
 			if(func == MMAX)
 				return *max_element(parameters.begin(), parameters.end());
 			else	
 				return *min_element(parameters.begin(), parameters.end());
 		case CELL:
 			if(find(recursion_list.begin(), recursion_list.end(), current()) != recursion_list.end()) {
-				throw runtime_error("Cell recurtion");
+				throw runtime_error("RECURSION");
 			}
 
 			recursion_list.push_back(current());
@@ -154,7 +159,7 @@ namespace parser {
 			recursion_list.pop_back();
 			return arg;
 		default:
-			throw runtime_error("unknown tocken");
+			throw runtime_error("BADTOCKEN");
 		}
 	}
 }

@@ -29,7 +29,7 @@
             "name": "C/C++: make build and debug active file",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${fileDirname}/calc",
+            "program": "${fileDirname}/../calc",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",

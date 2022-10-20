@@ -33,6 +33,7 @@ namespace interface {
 		MenuButton* but_rem_row;
 		MenuButton* but_add_col;
 		MenuButton* but_rem_col;
+		MenuButton* but_info;
 		MenuBox() 
 		{
 			this->set_orientation(Orientation::HORIZONTAL);
@@ -45,6 +46,7 @@ namespace interface {
 			but_add_col = make_managed<MenuButton>("+");
 			auto but_col = make_managed<MenuButton>("col");
 			but_rem_col = make_managed<MenuButton>("-");
+			but_info = make_managed<MenuButton>("info");
 
 			but_row->set_sensitive(false);
 			but_col->set_sensitive(false);
@@ -58,11 +60,13 @@ namespace interface {
 			append(*but_add_col);
 			append(*but_col);
 			append(*but_rem_col);
+			append(*but_info);
 		}
 	};
 
 	class Cell : public Entry 
 	{
+		int char_width;
 		string coords;
 		string expr;
 		static Entry* inp_coords;
@@ -73,10 +77,11 @@ namespace interface {
 		{
 			if(header)
 				set_text(coords);
-			set_width_chars(6);
-			set_max_width_chars(6);
+			char_width = 10;
+			set_width_chars(char_width);
+			set_max_width_chars(char_width);
 			set_expand(false);
-			set_size_request(-1, 35);
+			set_size_request(-1, 45);
 			auto provider = CssProvider::create();
 			provider->load_from_data(".button {font-size: 20px; border-radius: 0; border-width: 1px; outline-color: yellow; border-color: grey; border-style: solid;}");
 			add_css_class("button");
@@ -136,6 +141,7 @@ namespace interface {
 	Entry* Cell::inp_coords = nullptr;
 	Entry* Cell::inp_expr = nullptr;
 	function<void(string, string)> Cell::set_shit_expr = nullptr;
+	
 	class InputBox : public Box 
 	{
 		Entry* inp_expr;
@@ -217,6 +223,7 @@ namespace interface {
 				attach(*cell, cols, i);
 			}
 			cols++;
+			renew();
 		}
 		void add_row() 
 		{
@@ -228,6 +235,7 @@ namespace interface {
 				attach(*cell, i, rows);
 			}
 			rows++;
+			renew();
 		}
 
 		void rem_col()
@@ -278,7 +286,11 @@ namespace interface {
 			}
 			pair<int, int> res;
 			res.first = result;
-			res.second = stoi(coords.erase(0, i));
+			try {
+				res.second = stoi(coords.erase(0, i));
+			} catch (...) {
+				throw runtime_error("BADCOORDS");
+			}
 			return res;			
 		}
 
@@ -286,9 +298,14 @@ namespace interface {
 			if(!str.size())
 				throw runtime_error("Empty");
 			size_t a = 0;
-			double tmp = stod(str, &a);
+			double tmp;
+			try {
+				tmp = stod(str, &a);
+			} catch (...) {
+				throw runtime_error("BADNUMBER");
+			}
 			if(a != str.size())
-				throw runtime_error("Not full number");
+				throw runtime_error("BADNUMBER");
 			return tmp;
 		}
 
@@ -316,7 +333,7 @@ namespace interface {
 						double double_expr = calc_cell_expr(pair{i, j});
 						cell->set_text(tostring(double_expr));
 					} catch(exception& ex) {
-						cell->set_text(cell->get_expr());
+						cell->set_text(string("#") + ex.what());
 						cout << ex.what() << endl;
 					}
 				}
@@ -333,7 +350,7 @@ namespace interface {
 		{
 			auto cell_widget = get_child_at(coords.second, coords.first);
 			if(!cell_widget) {
-				throw runtime_error("Bad coordinates");
+				throw runtime_error("BADCOORDINATES");
 			}
 			auto cell = static_cast<Cell*>(cell_widget);
 			if(cell->get_expr()[0] == '=') 
@@ -448,15 +465,34 @@ namespace interface {
 		Spreadsheet* table;
 		ScrollableTable() 
 		{
-			table = make_managed<Spreadsheet>(5, 10);
+			table = make_managed<Spreadsheet>(8, 7);
 			set_propagate_natural_width(false);
-			set_size_request(1000, 400);
+			set_size_request(770, 350);
 			set_child(*table);
 			set_expand(true);
 		}
 	};
-
 }
+
+class InfoDialog : public MessageDialog 
+{
+public:
+	InfoDialog(Window& parent) : MessageDialog(parent, "About program", false, 
+		MessageType::INFO, ButtonsType::OK, true)
+	{
+		set_secondary_text(
+		"This program was developed by Mykhailo Statnik 2022\n"
+		"To write an expression write '=' before\n"
+		"You can use following operation:\n"
+		" - simple mathematical operations: +  -  *  /  ()\n"
+		" - power and modulo: ^ %\n"
+		" - min, max for multiple arguments: mmin(a, b) mmax(a, b, c)");
+		set_hide_on_close(true);
+		signal_response().connect([&](int response_id){
+			this->hide();
+		});
+	}
+};
 
 class ExitDialog : public MessageDialog
 {
@@ -515,6 +551,7 @@ class MyWindow : public Window
 	unique_ptr<MessageDialog> ex_dialog;
 	unique_ptr<FileSaver> save_dialog;
 	unique_ptr<FileLoader> load_dialog;
+	unique_ptr<InfoDialog> about_dialog;
 public:
 	MyWindow() : Window() {
 		outer_box.set_orientation(Orientation::VERTICAL);
@@ -540,15 +577,17 @@ public:
 		save_dialog.reset(new FileSaver(*this, sigc::mem_fun(
 			*scroll_table->table, &interface::Spreadsheet::save
 		)));
+		about_dialog.reset(new InfoDialog(*this));
 
 		menu_box->but_save->signal_clicked().connect([this]{ save_dialog->show(); });
+		menu_box->but_info->signal_clicked().connect([this]{ about_dialog->show();});
 
 		load_dialog.reset(new FileLoader(*this, sigc::mem_fun(
 			*scroll_table->table, &interface::Spreadsheet::load
 		)));
 		
 		menu_box->but_load->signal_clicked().connect([this]{ load_dialog->show(); });
-
+	
 		set_child(outer_box);
 	}
 private:
